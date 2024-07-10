@@ -1,0 +1,16 @@
+[general]
+name=Surfer In QGIS
+qgisMinimumVersion=3.4
+description=Use Surfer in QGIS
+about=Use Surfer interpolation method in QGIS
+version=0.0.1
+tags=surfer,interpolation,kriging
+icon=images/icon.png
+experimental=False
+deprecated=False
+author=liuxspro
+email=liuxspro@gmail.com
+homepage=https://github.com/liuxspro/SurferInQGIS
+tracker=https://github.com/liuxspro/SurferInQGIS/issues
+repository=https://github.com/liuxspro/SurferInQGIS
+changelog=
