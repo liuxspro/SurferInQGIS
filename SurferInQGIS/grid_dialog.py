@@ -19,7 +19,20 @@ from qgis.core import (
 from .pySurfer import Surfer
 from .ui.Grid import Ui_Form
 
-GridAlgorithm = {"反距离权重 (IDW)": 1, "克里金 (Kriging)": 2, "MinCurvature": 3}
+GridAlgorithm = {
+    "Inverse Distance to a Power": 1,
+    "Kriging": 2,
+    "Minimum Curvature": 3,
+    "Modified Shepard's Method": 4,
+    "Natural Neighbor": 5,
+    "Nearest Neighbor": 6,
+    "Polynomial Regression": 7,
+    "Radial Basis Function": 8,
+    "Triangulation with Linear Interpolation": 9,
+    "Moving Average": 10,
+    "Data Metrics": 11,
+    "Local Polynomial": 12,
+}
 temp_dir = tempfile.gettempdir()
 project_dir = Path(temp_dir).joinpath(uuid1().hex)
 project_dir.mkdir()
@@ -77,8 +90,7 @@ class GridDialog(QtWidgets.QDialog, Ui_Form):
         self.check_surfer = None
         self.project_dir = project_dir
         # C:\Users\liuxs\AppData\Local\Temp\processing_ESHtVM\ef7ab229b96c4ee1abb8a4c3f20561f5
-        # uuid ？
-        # 关注一下任务管理器surfer进程
+        # TODO 清理临时文件
         self.initUI()
 
     def initUI(self):
@@ -86,6 +98,7 @@ class GridDialog(QtWidgets.QDialog, Ui_Form):
         self.groupBox.setEnabled(False)
         self.groupBox_2.setEnabled(False)
         self.groupBox_3.setEnabled(False)
+        self.pushButton_2.setEnabled(False)
 
         self.check_surfer_version()
         # 检查数据，放在另一个函数中吧
@@ -109,7 +122,19 @@ class GridDialog(QtWidgets.QDialog, Ui_Form):
         pl = self.mMapLayerComboBox.currentLayer()
         self.mFieldComboBox.setLayer(pl)
         self.mFieldComboBox.setFilters(QgsFieldProxyModel.Double)
-        # TODO 优先选择 Z 高程 ELVE 等常见的表示高程的属性
+        fd = self.mFieldComboBox.currentField()
+
+        if fd == "":
+            # 没有数据的时候禁用 grid 按钮
+            self.pushButton_2.setEnabled(False)
+            return
+        self.pushButton_2.setEnabled(True)
+        print(self.mFieldComboBox.fields().names())
+        # 优先选择 Z 高程 ELVE 等常见的表示高程的属性
+        h_values = ["z", "Z", "ELVE"]
+        for h in h_values:
+            if h in self.mFieldComboBox.fields().names():
+                self.mFieldComboBox.setField(h)
 
     def init_surfer(self):
         self.app = Surfer()
@@ -118,6 +143,8 @@ class GridDialog(QtWidgets.QDialog, Ui_Form):
         pl = self.mMapLayerComboBox.currentLayer()
         fd = self.mFieldComboBox.currentField()
         if not pl or fd == "":
+            # 没有数据的时候禁用 grid 按钮
+            self.pushButton_2.setEnabled(False)
             return
         features = list(pl.getFeatures())
         self.grid_data = {
@@ -128,6 +155,7 @@ class GridDialog(QtWidgets.QDialog, Ui_Form):
         self.fill_data_table(self.grid_data)
         df = pd.DataFrame(self.grid_data)
         df.to_csv(self.project_dir.joinpath("grid_data.csv"), index=False)
+        self.pushButton_2.setEnabled(True)
 
     def set_surfer(self, version):
         if version != "":
@@ -178,6 +206,7 @@ class GridDialog(QtWidgets.QDialog, Ui_Form):
         self.data_tableWidget.resizeRowsToContents()
 
     def make_grid(self):
+        # TODO 数据不满足插值算法要求的时候会报错
         grid_method_selected = GridAlgorithm[self.comboBox.currentText()]
         self.app.grid(
             self.project_dir.joinpath("grid_data.csv"),
@@ -185,7 +214,6 @@ class GridDialog(QtWidgets.QDialog, Ui_Form):
             extend=get_extent(self.grid_data),
             app_visible=self.checkBox.isChecked(),
         )
-        # TODO 使用 QGIS 算法的临时目录
         grd_path = self.project_dir.joinpath("grid_data.grd")
         # make a copy file
         grd_path_tmp = self.project_dir.joinpath("grid_data_tmp.grd")
@@ -194,6 +222,3 @@ class GridDialog(QtWidgets.QDialog, Ui_Form):
         add_raster_layer(
             str(grd_path_tmp), "grid_data", self.mMapLayerComboBox.currentLayer().crs()
         )
-
-    def load_grd(self):
-        pass
