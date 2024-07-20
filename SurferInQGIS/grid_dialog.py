@@ -129,7 +129,6 @@ class GridDialog(QtWidgets.QDialog, Ui_Form):
             self.pushButton_2.setEnabled(False)
             return
         self.pushButton_2.setEnabled(True)
-        print(self.mFieldComboBox.fields().names())
         # 优先选择 Z 高程 ELVE 等常见的表示高程的属性
         h_values = ["z", "Z", "ELVE"]
         for h in h_values:
@@ -177,7 +176,6 @@ class GridDialog(QtWidgets.QDialog, Ui_Form):
     def toggle_surfer_visible(self):
         # 是否显示 Surfer App 窗口
         if self.checkBox.isChecked():
-            print("set false", self.app)
             self.app.Visible = False
         else:
             self.app.Visible = True
