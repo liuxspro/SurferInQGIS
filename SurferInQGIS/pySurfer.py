@@ -25,11 +25,6 @@ class Surfer:
         self.Version = None
         self.dispatch()
 
-    """
-
-
-    """
-
     def dispatch(self):
         # win32com.gen_py.54C3F9A2-980B-1068-83F9-0000C02A351Cx0x1x12.IApplication5
         try:
@@ -69,7 +64,8 @@ class Surfer:
         self.app.Visible = app_visible
         datafile = str(data_path)
         grd_file = str(data_path.parent.joinpath("grid_data.grd"))
-        self.app.GridData(
+        # https://surferhelp.goldensoftware.com/auto_ah/link_application_GridData6.htm
+        is_success_grid = self.app.GridData6(
             DataFile=datafile,
             Algorithm=algorithm,
             NumRows=150,
@@ -77,16 +73,19 @@ class Surfer:
             ShowReport=False,
             OutGrid=grd_file,
         )
-        map_frame = plot.Shapes.AddContourMap(GridFileName=grd_file)
-        map_frame.SetLimits(
-            xMin=extend["xmin"],
-            xMax=extend["xmax"],
-            yMin=extend["ymin"],
-            yMax=extend["ymax"],
-        )
-        map_frame.xLength = 6
-        map_frame.yLength = 4
-        map_frame.Overlays(1)
+        if is_success_grid:
+            # https://surferhelp.goldensoftware.com/autoobjects/link_mapframe.htm
+            map_frame = plot.Shapes.AddContourMap(GridFileName=grd_file)
+            map_frame.SetLimitsToData()
+            # map_frame.SetLimits(
+            #     xMin=extend["xmin"],
+            #     xMax=extend["xmax"],
+            #     yMin=extend["ymin"],
+            #     yMax=extend["ymax"],
+            # )
+            # map_frame.xLength = 6
+            # map_frame.yLength = 4
+            map_frame.Overlays(1)
 
     def quit(self):
         self.app.Quit()

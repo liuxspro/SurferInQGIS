@@ -220,3 +220,9 @@ class GridDialog(QtWidgets.QDialog, Ui_Form):
         add_raster_layer(
             str(grd_path_tmp), "grid_data", self.mMapLayerComboBox.currentLayer().crs()
         )
+
+    # def closeEvent(self, event):
+    #     # 在对话框关闭时触发的事件
+    #     print("close")
+    #     self.app.quit()
+    #     event.accept()  # 接受关闭事件，关闭对话框
