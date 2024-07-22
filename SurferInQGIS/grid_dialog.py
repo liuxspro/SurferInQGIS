@@ -6,7 +6,6 @@ from uuid import uuid1
 import pandas as pd
 from qgis.PyQt import QtWidgets
 from qgis.PyQt.QtCore import QThread, pyqtSignal
-from qgis.PyQt.QtWidgets import QHeaderView, QTableWidgetItem
 from qgis.core import (
     QgsFieldProxyModel,
     QgsMapLayerProxyModel,
@@ -16,6 +15,7 @@ from qgis.core import (
     QgsRasterPipe,
 )
 
+from .preview_data import PreviewData
 from .pySurfer import Surfer
 from .ui.Grid import Ui_Form
 
@@ -96,7 +96,7 @@ class GridDialog(QtWidgets.QDialog, Ui_Form):
     def initUI(self):
         # 在 Surfer 成功连接前禁用所有组件
         self.groupBox.setEnabled(False)
-        self.groupBox_2.setEnabled(False)
+        self.groupBox_4.setEnabled(False)
         self.groupBox_3.setEnabled(False)
         self.pushButton_2.setEnabled(False)
 
@@ -113,10 +113,18 @@ class GridDialog(QtWidgets.QDialog, Ui_Form):
         self.checkBox.stateChanged.connect(self.toggle_surfer_visible)
         # self.groupBox_3.setEnabled(False)
         # 字段变化时自动加载
-        self.preview_data()
-        self.mFieldComboBox.fieldChanged.connect(self.preview_data)
+        # self.preview_data()
+        # self.mFieldComboBox.fieldChanged.connect(self.preview_data)
         # set grid method
         self.comboBox.addItems(GridAlgorithm.keys())
+        #
+        self.pushButton.clicked.connect(self.showDataPreview)
+
+    def showDataPreview(self):
+        self.get_grid_data()
+        dlg = PreviewData(data=self.grid_data)
+        # dlg.show()
+        dlg.exec_()
 
     def set_layer(self):
         pl = self.mMapLayerComboBox.currentLayer()
@@ -138,7 +146,7 @@ class GridDialog(QtWidgets.QDialog, Ui_Form):
     def init_surfer(self):
         self.app = Surfer()
 
-    def preview_data(self):
+    def get_grid_data(self):
         pl = self.mMapLayerComboBox.currentLayer()
         fd = self.mFieldComboBox.currentField()
         if not pl or fd == "":
@@ -151,17 +159,13 @@ class GridDialog(QtWidgets.QDialog, Ui_Form):
             "y": [f.geometry().asPoint().y() for f in features],
             "z": [f.attribute(fd) for f in features],
         }
-        self.fill_data_table(self.grid_data)
-        df = pd.DataFrame(self.grid_data)
-        df.to_csv(self.project_dir.joinpath("grid_data.csv"), index=False)
-        self.pushButton_2.setEnabled(True)
 
     def set_surfer(self, version):
         if version != "":
             self.label_surfer_connect_status.setText(f"Connected to Surfer {version}")
             self.init_surfer()
             self.groupBox.setEnabled(True)
-            self.groupBox_2.setEnabled(True)
+            self.groupBox_4.setEnabled(True)
             self.groupBox_3.setEnabled(True)
         else:
             self.label_surfer_connect_status.setText("Filed to connect Surfer")
@@ -180,30 +184,11 @@ class GridDialog(QtWidgets.QDialog, Ui_Form):
         else:
             self.app.Visible = True
 
-    def fill_data_table(self, data):
-        self.data_tableWidget.clear()
-        row_count = len(data.get("x"))
-        self.data_tableWidget.setRowCount(row_count)
-        self.data_tableWidget.setColumnCount(3)
-        self.data_tableWidget.setHorizontalHeaderLabels(
-            [x.upper() for x in data.keys()]
-        )
-        self.data_tableWidget.horizontalHeader().setSectionResizeMode(
-            QHeaderView.Stretch
-        )
-        for row in range(row_count):
-            x = data["x"][row]
-            item_x = QTableWidgetItem(str(x))
-            self.data_tableWidget.setItem(row, 0, item_x)
-            y = data["y"][row]
-            item_y = QTableWidgetItem(str(y))
-            self.data_tableWidget.setItem(row, 1, item_y)
-            z = data["z"][row]
-            item_z = QTableWidgetItem(str(z))
-            self.data_tableWidget.setItem(row, 2, item_z)
-        self.data_tableWidget.resizeRowsToContents()
-
     def make_grid(self):
+        if self.grid_data is None:
+            return
+        df = pd.DataFrame(self.grid_data)
+        df.to_csv(self.project_dir.joinpath("grid_data.csv"), index=False)
         # TODO 数据不满足插值算法要求的时候会报错
         grid_method_selected = GridAlgorithm[self.comboBox.currentText()]
         self.app.grid(
