@@ -209,7 +209,6 @@ class GridDialog(QtWidgets.QDialog, Ui_Form):
         self.app.grid(
             self.project_dir.joinpath("grid_data.csv"),
             algorithm=grid_method_selected,
-            extend=get_extent(self.grid_data),
             app_visible=self.checkBox.isChecked(),
         )
         grd_path = self.project_dir.joinpath("grid_data.grd")

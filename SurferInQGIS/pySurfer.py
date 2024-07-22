@@ -57,7 +57,6 @@ class Surfer:
         self,
         data_path: Path,
         algorithm: SrfGridAlgorithm,
-        extend,
         app_visible: bool = False,
     ):
         plot = self.app.Documents.Add(1)
@@ -68,7 +67,7 @@ class Surfer:
         is_success_grid = self.app.GridData6(
             DataFile=datafile,
             Algorithm=algorithm,
-            NumRows=150,
+            NumRows=150,  # TODO 可设置
             NumCols=150,
             ShowReport=False,
             OutGrid=grd_file,
@@ -77,14 +76,6 @@ class Surfer:
             # https://surferhelp.goldensoftware.com/autoobjects/link_mapframe.htm
             map_frame = plot.Shapes.AddContourMap(GridFileName=grd_file)
             map_frame.SetLimitsToData()
-            # map_frame.SetLimits(
-            #     xMin=extend["xmin"],
-            #     xMax=extend["xmax"],
-            #     yMin=extend["ymin"],
-            #     yMax=extend["ymax"],
-            # )
-            # map_frame.xLength = 6
-            # map_frame.yLength = 4
             map_frame.Overlays(1)
 
     def quit(self):
