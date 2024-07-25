@@ -57,6 +57,8 @@ class Surfer:
         self,
         data_path: Path,
         algorithm: SrfGridAlgorithm,
+        NumRows,  # number of nodes in the X direction
+        NumCols,  # number of nodes in the Y direction
         app_visible: bool = False,
     ):
         plot = self.app.Documents.Add(1)
@@ -67,10 +69,11 @@ class Surfer:
         is_success_grid = self.app.GridData6(
             DataFile=datafile,
             Algorithm=algorithm,
-            NumRows=150,  # TODO 可设置
-            NumCols=150,
+            NumRows=NumRows,
+            NumCols=NumCols,
             ShowReport=False,
             OutGrid=grd_file,
+            # TODO set xMin xMax yMin yMax
         )
         if is_success_grid:
             # https://surferhelp.goldensoftware.com/autoobjects/link_mapframe.htm

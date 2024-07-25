@@ -102,22 +102,24 @@ class GridDialog(QtWidgets.QDialog, Ui_Form):
 
         self.check_surfer_version()
         # 检查数据
+        # https://qgis.org/pyqgis/3.38/gui/QgsMapLayerComboBox.html#qgis.gui.QgsMapLayerComboBox.layer
+        self.mMapLayerComboBox.setShowCrs(True)  # 显示 CRS
         self.mMapLayerComboBox.setFilters(QgsMapLayerProxyModel.PointLayer)
+        # 允许不选择范围图层,此时采用点图层的 Extent 作为范围
+        self.mMapLayerComboBox_2.setEnabled(False)  # TODO 范围 重投影与点图层一致
+        self.mMapLayerComboBox_2.setShowCrs(True)  # 显示 CRS
+        self.mMapLayerComboBox_2.setAllowEmptyLayer(True, text="根据点图层计算 Extent")
         self.mMapLayerComboBox_2.setFilters(QgsMapLayerProxyModel.PolygonLayer)
         self.mMapLayerComboBox.layerChanged.connect(self.set_layer)
-        # self.pushButton.clicked.connect(self.preview_data)
+
         self.pushButton_2.clicked.connect(self.make_grid)
         self.set_layer()
         # set check false
         self.checkBox.setChecked(False)
         self.checkBox.stateChanged.connect(self.toggle_surfer_visible)
         # self.groupBox_3.setEnabled(False)
-        # 字段变化时自动加载
-        # self.preview_data()
-        # self.mFieldComboBox.fieldChanged.connect(self.preview_data)
         # set grid method
         self.comboBox.addItems(GridAlgorithm.keys())
-        #
         self.pushButton.clicked.connect(self.showDataPreview)
 
     def showDataPreview(self):
@@ -189,6 +191,8 @@ class GridDialog(QtWidgets.QDialog, Ui_Form):
         if self.grid_data is None:
             print("no data")
             return
+        x_num = self.spinBox.value()
+        y_num = self.spinBox_2.value()
         df = pd.DataFrame(self.grid_data)
         df.to_csv(self.project_dir.joinpath("grid_data.csv"), index=False)
         # TODO 数据不满足插值算法要求的时候会报错
@@ -196,6 +200,8 @@ class GridDialog(QtWidgets.QDialog, Ui_Form):
         self.app.grid(
             self.project_dir.joinpath("grid_data.csv"),
             algorithm=grid_method_selected,
+            NumRows=x_num,
+            NumCols=y_num,
             app_visible=self.checkBox.isChecked(),
         )
         grd_path = self.project_dir.joinpath("grid_data.grd")
