@@ -1,18 +1,15 @@
-import shutil
-import tempfile
 from pathlib import Path
-from uuid import uuid1
 
 import pandas as pd
+from qgis import processing
 from qgis.PyQt import QtWidgets
 from qgis.PyQt.QtCore import QThread, pyqtSignal
 from qgis.core import (
     QgsFieldProxyModel,
     QgsMapLayerProxyModel,
     QgsProject,
-    QgsRasterFileWriter,
     QgsRasterLayer,
-    QgsRasterPipe,
+    QgsProcessingUtils,
 )
 
 from .preview_data import PreviewData
@@ -33,39 +30,44 @@ GridAlgorithm = {
     "Data Metrics": 11,
     "Local Polynomial": 12,
 }
-temp_dir = tempfile.gettempdir()
-project_dir = Path(temp_dir).joinpath(uuid1().hex)
-project_dir.mkdir()
+
+SurferProcessing = QgsProcessingUtils()
+qgis_temp_dir = SurferProcessing.tempFolder(context=None)
+project_temp_dir = Path(SurferProcessing.generateTempFilename("SurferTempProject"))
+project_temp_dir.mkdir()
 
 
 def add_raster_layer(uri, name, crs):
-    # load grd file
+    # load surfer grd file
     raster_layer = QgsRasterLayer(uri, name)
     raster_layer.setCrs(crs)
 
-    data_provider = raster_layer.dataProvider()
-    # TODO save to temp folder
-    tif_path = str(project_dir.joinpath("grid.tif"))
-    writer = QgsRasterFileWriter(tif_path)
-    pipe = QgsRasterPipe()
-    pipe.set(data_provider.clone())
-    writer.writeRaster(
-        pipe,
-        raster_layer.width(),
-        raster_layer.height(),
-        raster_layer.extent(),
-        raster_layer.crs(),
-    )
-    tif_raster_layer = QgsRasterLayer(tif_path, name)
-    tif_raster_layer.setCrs(crs)
-    QgsProject.instance().addMapLayer(tif_raster_layer)
+    # QgsProject.instance().addMapLayer() 使用此方法添加临时目录中的栅格图层不能识别为临时图层
+    # 使用 processing 算法“按范围裁剪栅格”来生成临时图层
+
+    # Can also try runAndLoadResults
+    # `processing.runAndLoadResults("native:buffer", {parameters:values})`
+    # https://docs.qgis.org/3.34/en/docs/user_manual/processing/console.html
+    parms = {
+        "INPUT": raster_layer,
+        "CRS": crs,
+        "PROJWIN": raster_layer.extent(),
+        "OVERCRS": True,
+        "OUTPUT": "TEMPORARY_OUTPUT",
+    }
+    result = processing.run("gdal:cliprasterbyextent", parms)
+    output_layer = QgsRasterLayer(result["OUTPUT"], name, "gdal")
+    if output_layer.isValid():
+        QgsProject.instance().addMapLayer(output_layer)
+    else:
+        print("Failed to add raster layer")
 
 
 class CheckSurfer(QThread):
-    check_finished = pyqtSignal(str)
+    check_finished = pyqtSignal(str, name="check_finished")
 
     def __init__(self):
-        super().__init__()
+        super().__init__(parent=None)
 
     def run(self):
         app = Surfer()
@@ -88,9 +90,7 @@ class GridDialog(QtWidgets.QDialog, Ui_Form):
         self.app = None
         self.grid_data = None
         self.check_surfer = None
-        self.project_dir = project_dir
-        # C:\Users\liuxs\AppData\Local\Temp\processing_ESHtVM\ef7ab229b96c4ee1abb8a4c3f20561f5
-        # TODO 清理临时文件
+        self.project_dir = project_temp_dir
         self.initUI()
 
     def initUI(self):
@@ -101,7 +101,7 @@ class GridDialog(QtWidgets.QDialog, Ui_Form):
         self.pushButton_2.setEnabled(False)
 
         self.check_surfer_version()
-        # 检查数据，放在另一个函数中吧
+        # 检查数据
         self.mMapLayerComboBox.setFilters(QgsMapLayerProxyModel.PointLayer)
         self.mMapLayerComboBox_2.setFilters(QgsMapLayerProxyModel.PolygonLayer)
         self.mMapLayerComboBox.layerChanged.connect(self.set_layer)
@@ -185,7 +185,9 @@ class GridDialog(QtWidgets.QDialog, Ui_Form):
             self.app.Visible = True
 
     def make_grid(self):
+        self.get_grid_data()
         if self.grid_data is None:
+            print("no data")
             return
         df = pd.DataFrame(self.grid_data)
         df.to_csv(self.project_dir.joinpath("grid_data.csv"), index=False)
@@ -197,12 +199,8 @@ class GridDialog(QtWidgets.QDialog, Ui_Form):
             app_visible=self.checkBox.isChecked(),
         )
         grd_path = self.project_dir.joinpath("grid_data.grd")
-        # make a copy file
-        grd_path_tmp = self.project_dir.joinpath("grid_data_tmp.grd")
-        shutil.copyfile(grd_path, grd_path_tmp)
-        # self.app.quit()
         add_raster_layer(
-            str(grd_path_tmp), "grid_data", self.mMapLayerComboBox.currentLayer().crs()
+            str(grd_path), "grid_data", self.mMapLayerComboBox.currentLayer().crs()
         )
 
     # def closeEvent(self, event):
