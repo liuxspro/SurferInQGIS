@@ -149,11 +149,11 @@ class GridDialog(QtWidgets.QDialog, Ui_Form):
         self.mFieldComboBox.setLayer(pl)
         self.mFieldComboBox.setFilters(QgsFieldProxyModel.Double)
         # 设置输出CRS
-        self.extent_widget.setOutputCrs(pl.crs())
-        self.extent_widget.setOutputExtentFromLayer(pl)
+        if pl:
+            self.extent_widget.setOutputCrs(pl.crs())
+            self.extent_widget.setOutputExtentFromLayer(pl)
 
         fd = self.mFieldComboBox.currentField()
-
         if fd == "":
             # 没有数据的时候禁用 grid 按钮
             self.pushButton_2.setEnabled(False)
