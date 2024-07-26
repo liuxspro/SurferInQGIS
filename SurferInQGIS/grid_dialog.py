@@ -4,6 +4,7 @@ import pandas as pd
 from qgis import processing
 from qgis.PyQt import QtWidgets
 from qgis.PyQt.QtCore import QThread, pyqtSignal
+from qgis.PyQt.QtGui import QFont
 from qgis.core import (
     QgsFieldProxyModel,
     QgsMapLayerProxyModel,
@@ -11,6 +12,7 @@ from qgis.core import (
     QgsRasterLayer,
     QgsProcessingUtils,
 )
+from qgis.gui import QgsExtentWidget
 
 from .preview_data import PreviewData
 from .pySurfer import Surfer
@@ -90,10 +92,24 @@ class GridDialog(QtWidgets.QDialog, Ui_Form):
         self.app = None
         self.grid_data = None
         self.check_surfer = None
+        self.extent_widget = None
         self.project_dir = project_temp_dir
         self.initUI()
 
     def initUI(self):
+        # QgsExtentWidget 不在 Qt Designer 的 QGIS custom widgets 中
+        # 手动添加 Widget
+        # QgsExtentWidget 在 3.14 版本中添加
+        # https://qgis.org/pyqgis/3.38/gui/QgsExtentWidget.html
+        self.extent_widget = QgsExtentWidget(self.groupBox)
+        # 设置字体大小为 9
+        font = QFont()
+        font.setPointSize(9)
+        self.extent_widget.setFont(font)
+        # 设置为 ExpandedStyle 就与 QgsExtentGroupBox一样了
+        self.horizontalLayout_2.addWidget(self.extent_widget)
+        self.horizontalLayout_2.setStretch(0, 0)  # 第1个元素的拉伸比例为0
+        self.horizontalLayout_2.setStretch(1, 1)  # 第2个元素的拉伸比例为1
         # 在 Surfer 成功连接前禁用所有组件
         self.groupBox.setEnabled(False)
         self.groupBox_4.setEnabled(False)
@@ -106,10 +122,10 @@ class GridDialog(QtWidgets.QDialog, Ui_Form):
         self.mMapLayerComboBox.setShowCrs(True)  # 显示 CRS
         self.mMapLayerComboBox.setFilters(QgsMapLayerProxyModel.PointLayer)
         # 允许不选择范围图层,此时采用点图层的 Extent 作为范围
-        self.mMapLayerComboBox_2.setEnabled(False)  # TODO 范围 重投影与点图层一致
-        self.mMapLayerComboBox_2.setShowCrs(True)  # 显示 CRS
-        self.mMapLayerComboBox_2.setAllowEmptyLayer(True, text="根据点图层计算 Extent")
-        self.mMapLayerComboBox_2.setFilters(QgsMapLayerProxyModel.PolygonLayer)
+        # self.mMapLayerComboBox_2.setEnabled(False)  # TODO 范围 重投影与点图层一致
+        # self.mMapLayerComboBox_2.setShowCrs(True)  # 显示 CRS
+        # self.mMapLayerComboBox_2.setAllowEmptyLayer(True, text="根据点图层计算 Extent")
+        # self.mMapLayerComboBox_2.setFilters(QgsMapLayerProxyModel.PolygonLayer)
         self.mMapLayerComboBox.layerChanged.connect(self.set_layer)
 
         self.pushButton_2.clicked.connect(self.make_grid)
@@ -132,6 +148,10 @@ class GridDialog(QtWidgets.QDialog, Ui_Form):
         pl = self.mMapLayerComboBox.currentLayer()
         self.mFieldComboBox.setLayer(pl)
         self.mFieldComboBox.setFilters(QgsFieldProxyModel.Double)
+        # 设置输出CRS
+        self.extent_widget.setOutputCrs(pl.crs())
+        self.extent_widget.setOutputExtentFromLayer(pl)
+
         fd = self.mFieldComboBox.currentField()
 
         if fd == "":
@@ -191,6 +211,8 @@ class GridDialog(QtWidgets.QDialog, Ui_Form):
         if self.grid_data is None:
             print("no data")
             return
+
+        output_extent = self.extent_widget.outputExtent()
         x_num = self.spinBox.value()
         y_num = self.spinBox_2.value()
         df = pd.DataFrame(self.grid_data)
@@ -202,6 +224,7 @@ class GridDialog(QtWidgets.QDialog, Ui_Form):
             algorithm=grid_method_selected,
             NumRows=x_num,
             NumCols=y_num,
+            Extent=output_extent,
             app_visible=self.checkBox.isChecked(),
         )
         grd_path = self.project_dir.joinpath("grid_data.grd")

@@ -59,6 +59,7 @@ class Surfer:
         algorithm: SrfGridAlgorithm,
         NumRows,  # number of nodes in the X direction
         NumCols,  # number of nodes in the Y direction
+        Extent,  # Extent of Layer <QgsRectangle>
         app_visible: bool = False,
     ):
         plot = self.app.Documents.Add(1)
@@ -73,7 +74,10 @@ class Surfer:
             NumCols=NumCols,
             ShowReport=False,
             OutGrid=grd_file,
-            # TODO set xMin xMax yMin yMax
+            xMin=Extent.xMinimum(),
+            xMax=Extent.xMaximum(),
+            yMin=Extent.yMinimum(),
+            yMax=Extent.yMaximum(),
         )
         if is_success_grid:
             # https://surferhelp.goldensoftware.com/autoobjects/link_mapframe.htm
