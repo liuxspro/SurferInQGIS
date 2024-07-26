@@ -1,9 +1,9 @@
 [general]
 name=Surfer In QGIS
-qgisMinimumVersion=3.4
-description=Use Surfer in QGIS
-about=Use Surfer interpolation method in QGIS
-version=0.0.1
+qgisMinimumVersion=3.14
+description=Integrates Surfer's powerful interpolation features into QGIS
+about=Integrates Surfer's powerful interpolation features into QGIS
+version=0.0.1-dev
 tags=surfer,interpolation,kriging
 icon=images/icon.png
 experimental=False
