@@ -117,15 +117,10 @@ class GridDialog(QtWidgets.QDialog, Ui_Form):
         self.pushButton_2.setEnabled(False)
 
         self.check_surfer_version()
-        # 检查数据
+        # 选择图层
         # https://qgis.org/pyqgis/3.38/gui/QgsMapLayerComboBox.html#qgis.gui.QgsMapLayerComboBox.layer
         self.mMapLayerComboBox.setShowCrs(True)  # 显示 CRS
         self.mMapLayerComboBox.setFilters(QgsMapLayerProxyModel.PointLayer)
-        # 允许不选择范围图层,此时采用点图层的 Extent 作为范围
-        # self.mMapLayerComboBox_2.setEnabled(False)  # TODO 范围 重投影与点图层一致
-        # self.mMapLayerComboBox_2.setShowCrs(True)  # 显示 CRS
-        # self.mMapLayerComboBox_2.setAllowEmptyLayer(True, text="根据点图层计算 Extent")
-        # self.mMapLayerComboBox_2.setFilters(QgsMapLayerProxyModel.PolygonLayer)
         self.mMapLayerComboBox.layerChanged.connect(self.set_layer)
 
         self.pushButton_2.clicked.connect(self.make_grid)
@@ -133,7 +128,6 @@ class GridDialog(QtWidgets.QDialog, Ui_Form):
         # set check false
         self.checkBox.setChecked(False)
         self.checkBox.stateChanged.connect(self.toggle_surfer_visible)
-        # self.groupBox_3.setEnabled(False)
         # set grid method
         self.comboBox.addItems(GridAlgorithm.keys())
         self.pushButton.clicked.connect(self.showDataPreview)
